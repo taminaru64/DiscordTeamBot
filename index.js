@@ -77,12 +77,7 @@ const rest = new REST({ version: "10" }).setToken(TOKEN);
         await rest.put(Routes.applicationGuildCommands(CLIENT_ID, GUILD_ID), {
             body: commands,
         });
-        console.log("✅ コマンド登録完了！");
-    } catch (error) {
-        console.error("❌ コマンド登録失敗:", error);
-    }
-})();
-
+        console.log("✅ コマンド登録完了！");    
 
 const app = express();
 app.get("/", (req, res) => res.send("Bot is alive!"));
@@ -100,6 +95,7 @@ const client = new Client({
 client.once("ready", () => {
     console.log(`✅ ログイン成功：${client.user.tag}`);
 });
+
 client.on("interactionCreate", async (interaction) => {
     if (!interaction.guild) return;
     const guild = interaction.guild;
@@ -354,3 +350,8 @@ client.on("interactionCreate", async (interaction) => {
     }
 });
 client.login(process.env.TOKEN);
+
+    } catch (error) {
+        console.error("❌ コマンド登録失敗:", error);
+    }
+})();
