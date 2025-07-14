@@ -1,3 +1,4 @@
+// deploy-commands.js
 require("dotenv").config();
 const { REST, Routes } = require("discord.js");
 
@@ -20,35 +21,23 @@ const commands = [
     },
     {
         name: "team_delete",
-        description: "このチャンネルのチームを削除します（チーム内で使用）",
+        description: "このチャンネルのチームを削除します（chat内のみ）",
     },
     {
         name: "team_addmember",
-        description: "チームに指定メンバーを追加します",
+        description: "チームにメンバーを追加します",
         options: [
             {
-                name: "member",
-                description: "追加するメンバー",
-                type: 6,
-                required: true,
-            },
-        ],
-    },
-    {
-        name: "team_removemember",
-        description: "チームから指定メンバーを外します",
-        options: [
-            {
-                name: "member",
-                description: "外すメンバー",
-                type: 6,
+                name: "user",
+                description: "追加するユーザー",
+                type: 6, // USER
                 required: true,
             },
         ],
     },
     {
         name: "team_rename",
-        description: "チーム名を変更します（チーム内で使用）",
+        description: "チーム名を変更します",
         options: [
             {
                 name: "new_name",
@@ -58,13 +47,24 @@ const commands = [
             },
         ],
     },
+    {
+        name: "team_removemember",
+        description: "チームからメンバーを外します",
+        options: [
+            {
+                name: "user",
+                description: "外すユーザー",
+                type: 6,
+                required: true,
+            },
+        ],
+    },
 ];
 
-const rest = new REST({ version: "10" }).setToken(TOKEN);
-
-(async () => {
+async function deployCommands() {
+    const rest = new REST({ version: "10" }).setToken(TOKEN);
     try {
-        console.log("📤 コマンド登録中...");
+        console.log("📤 コマンドを登録中...");
         await rest.put(Routes.applicationGuildCommands(CLIENT_ID, GUILD_ID), {
             body: commands,
         });
@@ -72,4 +72,6 @@ const rest = new REST({ version: "10" }).setToken(TOKEN);
     } catch (error) {
         console.error("❌ コマンド登録失敗:", error);
     }
-})();
+}
+
+module.exports = deployCommands;

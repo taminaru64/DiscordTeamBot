@@ -1,3 +1,12 @@
+// index.js の最上部
+const deployCommands = require("./deploy-commands");
+
+// Bot起動時に一度だけ実行
+deployCommands().then(() => {
+    console.log("✅ コマンド登録処理 完了");
+});
+
+
 require("dotenv").config();
 
 const express = require("express");
