@@ -1,195 +1,337 @@
 require("dotenv").config();
-const express = require("express");
-const {
-  Client,
-  GatewayIntentBits,
-  PermissionsBitField,
-  ChannelType,
-  Partials,
-  Routes,
-  REST,
-  SlashCommandBuilder,
-  ActionRowBuilder,
-  ButtonBuilder,
-  ButtonStyle,
-  Events,
-} = require("discord.js");
 
-const app = express();
-app.get("/", (req, res) => {
-  res.send("Bot is alive!");
-});
-const port = process.env.PORT || 3000;
-app.listen(port, () => {
-  console.log(`\u{1F310} Webサーバーがポート${port}で起動しました`);
-});
+const deployCommands = require("./deploy-commands");
 
-const client = new Client({
-  intents: [GatewayIntentBits.Guilds, GatewayIntentBits.GuildMembers],
-  partials: [Partials.Channel],
-});
+(async () => {
+  try {
+    await deployCommands(); // ここで待ってから次へ
 
-client.once("ready", () => {
-  console.log(`\u{2705} ログイン成功: ${client.user.tag}`);
-});
+    const {
+        Client,
+        GatewayIntentBits,
+        PermissionsBitField,
+        ChannelType,
+        ActionRowBuilder,
+        ButtonBuilder,
+        ButtonStyle,
+    } = require("discord.js");
 
-client.on(Events.InteractionCreate, async (interaction) => {
-  if (interaction.isChatInputCommand()) {
-    const { commandName, guild, member } = interaction;
+    const client = new Client({
+      intents: [GatewayIntentBits.Guilds, GatewayIntentBits.GuildMembers],
+    });
 
-    if (commandName === "team_create") {
-      const teamName = interaction.options.getString("name");
-      const roleName = `Team_${teamName}`;
+    // ↓ Bot ログイン
+    client.once("ready", () => {
+      console.log(`✅ ログイン成功：${client.user.tag}`);
+    });
 
-      await interaction.deferReply({ ephemeral: true });
+    client.login(process.env.TOKEN);
 
-      if (guild.roles.cache.find((r) => r.name === roleName)) {
-        return await interaction.editReply("❌ 同じ名前のチームがすでに存在します。");
-      }
+    // ↓ Web サーバー起動（Render用）
+    const express = require("express");
+    const app = express();
+    app.get("/", (req, res) => {
+      res.send("Bot is alive!");
+    });
+    app.listen(3000, () => {
+      console.log("🌐 Webサーバーがポート3000で起動しました");
+    });
 
-      const role = await guild.roles.create({ name: roleName });
-      const category = await guild.channels.create({
-        name: roleName,
-        type: ChannelType.GuildCategory,
-        permissionOverwrites: [
-          { id: guild.roles.everyone.id, deny: [PermissionsBitField.Flags.ViewChannel] },
-          { id: role.id, allow: [PermissionsBitField.Flags.ViewChannel, PermissionsBitField.Flags.ManageChannels, PermissionsBitField.Flags.Connect] },
-        ],
-      });
+    process.on("unhandledRejection", (reason, promise) => {
+        console.error("Unhandled Rejection:", reason);
+    });
+    process.on("uncaughtException", (error) => {
+        console.error("Uncaught Exception:", error);
+    });
 
-      await guild.channels.create({
-        name: "テキストチャンネル",
-        type: ChannelType.GuildText,
-        parent: category.id,
-        permissionOverwrites: [
-          { id: guild.roles.everyone.id, deny: [PermissionsBitField.Flags.ViewChannel] },
-          { id: role.id, allow: [PermissionsBitField.Flags.ViewChannel, PermissionsBitField.Flags.SendMessages] },
-        ],
-      });
+    client.on("interactionCreate", async (interaction) => {
+        if (!interaction.guild) return;
+        const guild = interaction.guild;
 
-      await guild.channels.create({
-        name: "ボイスチャンネル",
-        type: ChannelType.GuildVoice,
-        parent: category.id,
-        permissionOverwrites: [
-          { id: guild.roles.everyone.id, deny: [PermissionsBitField.Flags.ViewChannel] },
-          { id: role.id, allow: [PermissionsBitField.Flags.ViewChannel, PermissionsBitField.Flags.Connect] },
-        ],
-      });
+        try {
+            if (interaction.isChatInputCommand()) {
+                const commandName = interaction.commandName;
+                await interaction.deferReply({ ephemeral: true });
 
-      await member.roles.add(role);
-      await interaction.editReply(`✅ チーム「${teamName}」を作成しました！`);
+                // /team_create
+                if (commandName === "team_create") {
+                    const teamName = interaction.options.getString("name");
+                    const roleName = `Team_${teamName}`;
+                    const categoryName = `Team_${teamName}`;
 
-    } else if (commandName === "team_delete") {
-      const channel = interaction.channel;
-      if (!channel.parent) return await interaction.reply({ content: "❌ このチャンネルはチーム内ではありません。", ephemeral: true });
+                    const exists =
+                        guild.roles.cache.find((r) => r.name === roleName) ||
+                        guild.channels.cache.find(
+                            (c) =>
+                                c.name === categoryName && c.type === ChannelType.GuildCategory,
+                        );
 
-      const category = channel.parent;
-      const teamName = category.name.replace(/^Team_/, "");
-      const role = guild.roles.cache.find(r => r.name === `Team_${teamName}`);
+                    if (exists) {
+                        return await interaction.editReply(
+                            `❌ チーム「${teamName}」はすでに存在します。`,
+                        );
+                    }
 
-      if (!role || (!member.roles.cache.has(role.id) && !member.permissions.has(PermissionsBitField.Flags.Administrator))) {
-        return await interaction.reply({ content: "❌ このチームを削除する権限がありません。", ephemeral: true });
-      }
+                    const role = await guild.roles.create({ name: roleName });
+                    const category = await guild.channels.create({
+                        name: categoryName,
+                        type: ChannelType.GuildCategory,
+                        permissionOverwrites: [
+                            {
+                                id: guild.roles.everyone.id,
+                                deny: [PermissionsBitField.Flags.ViewChannel],
+                            },
+                            {
+                                id: role.id,
+                                allow: [
+                                    PermissionsBitField.Flags.ViewChannel,
+                                    PermissionsBitField.Flags.ManageChannels,
+                                    PermissionsBitField.Flags.Connect,
+                                ],
+                            },
+                        ],
+                    });
 
-      const row = new ActionRowBuilder().addComponents(
-        new ButtonBuilder()
-          .setCustomId(`confirm_delete_${teamName}_${member.id}`)
-          .setLabel("✅ 本当に削除する")
-          .setStyle(ButtonStyle.Danger)
-      );
+                    await guild.channels.create({
+                        name: "テキストチャンネル",
+                        type: ChannelType.GuildText,
+                        parent: category,
+                        permissionOverwrites: [
+                            {
+                                id: guild.roles.everyone.id,
+                                deny: [PermissionsBitField.Flags.ViewChannel],
+                            },
+                            {
+                                id: role.id,
+                                allow: [
+                                    PermissionsBitField.Flags.ViewChannel,
+                                    PermissionsBitField.Flags.SendMessages,
+                                ],
+                            },
+                        ],
+                    });
 
-      await interaction.reply({
-        content: `⚠️ チーム「${teamName}」を削除してもよろしいですか？`,
-        components: [row],
-        ephemeral: true,
-      });
+                    await guild.channels.create({
+                        name: "ボイスチャンネル",
+                        type: ChannelType.GuildVoice,
+                        parent: category,
+                        permissionOverwrites: [
+                            {
+                                id: guild.roles.everyone.id,
+                                deny: [PermissionsBitField.Flags.ViewChannel],
+                            },
+                            {
+                                id: role.id,
+                                allow: [
+                                    PermissionsBitField.Flags.ViewChannel,
+                                    PermissionsBitField.Flags.Connect,
+                                ],
+                            },
+                        ],
+                    });
 
-    } else if (commandName === "team_addmember") {
-      const user = interaction.options.getUser("user");
-      const channel = interaction.channel;
-      if (!channel.parent) return await interaction.reply({ content: "❌ チーム内で実行してください。", ephemeral: true });
+                    await interaction.member.roles.add(role);
+                    await interaction.editReply(`✅ チーム「${teamName}」を作成しました！`);
+                }
 
-      const teamName = channel.parent.name.replace(/^Team_/, "");
-      const role = interaction.guild.roles.cache.find(r => r.name === `Team_${teamName}`);
-      if (!role) return await interaction.reply({ content: "❌ チームが見つかりません。", ephemeral: true });
+                // /team_delete
+                else if (commandName === "team_delete") {
+                    const channel = interaction.channel;
+                    if (!channel.parent) {
+                        return interaction.editReply(
+                            "❌ このコマンドはチームのカテゴリー内でのみ使用してください。",
+                        );
+                    }
 
-      const memberToAdd = await guild.members.fetch(user.id);
-      await memberToAdd.roles.add(role);
-      await interaction.reply({ content: `✅ ${user.username} をチーム「${teamName}」に追加しました。`, ephemeral: true });
+                    const match = channel.parent.name.match(/^Team_(.+)$/);
+                    if (!match) {
+                        return interaction.editReply(
+                            "❌ チームのカテゴリー内でのみ使用してください。",
+                        );
+                    }
 
-    } else if (commandName === "team_removemember") {
-      const user = interaction.options.getUser("user");
-      const channel = interaction.channel;
-      if (!channel.parent) return await interaction.reply({ content: "❌ チーム内で実行してください。", ephemeral: true });
+                    const teamName = match[1];
+                    const role = interaction.member.roles.cache.find(
+                        (r) => r.name === `Team_${teamName}`,
+                    );
+                    const isAdmin = interaction.member.permissions.has(
+                        PermissionsBitField.Flags.Administrator,
+                    );
 
-      const teamName = channel.parent.name.replace(/^Team_/, "");
-      const role = interaction.guild.roles.cache.find(r => r.name === `Team_${teamName}`);
-      if (!role) return await interaction.reply({ content: "❌ チームが見つかりません。", ephemeral: true });
+                    if (!role && !isAdmin) {
+                        return interaction.editReply(
+                            `❌ あなたはチーム「${teamName}」のメンバーではありません。`,
+                        );
+                    }
 
-      const memberToRemove = await guild.members.fetch(user.id);
-      await memberToRemove.roles.remove(role);
-      await interaction.reply({ content: `✅ ${user.username} をチーム「${teamName}」から外しました。`, ephemeral: true });
+                    const row = new ActionRowBuilder().addComponents(
+                        new ButtonBuilder()
+                            .setCustomId(`confirm_delete_${teamName}_${interaction.user.id}`)
+                            .setLabel("✅ 本当に削除する")
+                            .setStyle(ButtonStyle.Danger),
+                    );
 
-      const roleMembers = guild.members.cache.filter(m => m.roles.cache.has(role.id));
-      if (roleMembers.size === 0) {
-        const category = guild.channels.cache.find(c => c.name === `Team_${teamName}` && c.type === ChannelType.GuildCategory);
-        if (category) {
-          const children = guild.channels.cache.filter(ch => ch.parentId === category.id);
-          for (const [, ch] of children) await ch.delete();
-          await category.delete();
+                    await interaction.editReply({
+                        content: `⚠️ 本当にチーム「${teamName}」を削除しますか？`,
+                        components: [row],
+                    });
+                }
+
+                // /team_addmember
+                else if (commandName === "team_addmember") {
+                    const target = interaction.options.getUser("member");
+                    const channel = interaction.channel;
+
+                    if (!channel.parent) {
+                        return interaction.editReply(
+                            "❌ このコマンドはチームのカテゴリー内で使用してください。",
+                        );
+                    }
+
+                    const match = channel.parent.name.match(/^Team_(.+)$/);
+                    if (!match) {
+                        return interaction.editReply(
+                            "❌ チームのカテゴリー内で使用してください。",
+                        );
+                    }
+
+                    const teamName = match[1];
+                    const role = guild.roles.cache.find(
+                        (r) => r.name === `Team_${teamName}`,
+                    );
+                    const member = await guild.members.fetch(target.id);
+
+                    if (!role) {
+                        return interaction.editReply(
+                            `❌ チーム「${teamName}」のロールが見つかりません。`,
+                        );
+                    }
+
+                    await member.roles.add(role);
+                    await interaction.editReply(
+                        `✅ ${target.username} をチーム「${teamName}」に追加しました。`,
+                    );
+                }
+
+                // /team_removemember
+                else if (commandName === "team_removemember") {
+                    const target = interaction.options.getUser("member");
+                    const channel = interaction.channel;
+
+                    if (!channel.parent) {
+                        return interaction.editReply(
+                            "❌ このコマンドはチームのカテゴリー内で使用してください。",
+                        );
+                    }
+
+                    const match = channel.parent.name.match(/^Team_(.+)$/);
+                    if (!match) {
+                        return interaction.editReply(
+                            "❌ チームのカテゴリー内で使用してください。",
+                        );
+                    }
+
+                    const teamName = match[1];
+                    const role = guild.roles.cache.find(
+                        (r) => r.name === `Team_${teamName}`,
+                    );
+                    const member = await guild.members.fetch(target.id);
+
+                    if (!role || !member.roles.cache.has(role.id)) {
+                        return interaction.editReply(
+                            `❌ ユーザーはチーム「${teamName}」のメンバーではありません。`,
+                        );
+                    }
+
+                    await member.roles.remove(role);
+                    await interaction.editReply(
+                        `✅ ${target.username} をチーム「${teamName}」から削除しました。`,
+                    );
+
+                    // ロールのメンバーが0人なら自動削除
+                    const roleMembers = role.members;
+                    if (roleMembers.size === 0) {
+                        const category = guild.channels.cache.find(
+                            (c) =>
+                                c.name === `Team_${teamName}` &&
+                                c.type === ChannelType.GuildCategory,
+                        );
+                        if (category) {
+                            const children = guild.channels.cache.filter(
+                                (c) => c.parentId === category.id,
+                            );
+                            for (const [, child] of children) {
+                                await child.delete("チーム自動削除");
+                            }
+                            await category.delete();
+                        }
+                        await role.delete();
+                        console.log(
+                            `🗑️ チーム「${teamName}」を自動削除しました（メンバーなし）`,
+                        );
+                    }
+                }
+            }
+
+            // ボタン操作: 削除確認
+            if (interaction.isButton()) {
+                const [prefix, action, teamName, userId] =
+                    interaction.customId.split("_");
+                if (
+                    prefix !== "confirm" ||
+                    action !== "delete" ||
+                    interaction.user.id !== userId
+                ) {
+                    return interaction.reply({
+                        content: "❌ あなたはこのボタンを使用できません。",
+                        ephemeral: true,
+                    });
+                }
+
+                const role = interaction.guild.roles.cache.find(
+                    (r) => r.name === `Team_${teamName}`,
+                );
+                const category = interaction.guild.channels.cache.find(
+                    (c) =>
+                        c.name === `Team_${teamName}` && c.type === ChannelType.GuildCategory,
+                );
+                if (!role || !category) {
+                    return await interaction.update({
+                        content: "❌ チームが見つかりません。",
+                        components: [],
+                    });
+                }
+
+                const children = interaction.guild.channels.cache.filter(
+                    (c) => c.parentId === category.id,
+                );
+                for (const [, child] of children) {
+                    await child.delete("チーム削除");
+                }
+                await category.delete();
+                await role.delete();
+
+                await interaction.update({
+                    content: `✅ チーム「${teamName}」を削除しました。`,
+                    components: [],
+                });
+            }
+        } catch (error) {
+            console.error("❌ 実行エラー:", error);
+            if (interaction.deferred) {
+                await interaction.editReply("❌ コマンド実行中にエラーが発生しました。");
+            } else {
+                await interaction.reply({
+                    content: "❌ エラーが発生しました。",
+                    ephemeral: true,
+                });
+            }
         }
-        await role.delete();
-      }
+    });
 
-    } else if (commandName === "team_rename") {
-      const newName = interaction.options.getString("new_name");
-      const channel = interaction.channel;
-      if (!channel.parent) return await interaction.reply({ content: "❌ チーム内で実行してください。", ephemeral: true });
-
-      const oldTeamName = channel.parent.name.replace(/^Team_/, "");
-      const oldRole = guild.roles.cache.find(r => r.name === `Team_${oldTeamName}`);
-      if (!oldRole) return await interaction.reply({ content: "❌ 古いチームロールが見つかりません。", ephemeral: true });
-
-      const newRoleName = `Team_${newName}`;
-      await oldRole.setName(newRoleName);
-
-      const category = channel.parent;
-      await category.setName(newRoleName);
-
-      await interaction.reply({ content: `✅ チーム名を「${newName}」に変更しました。`, ephemeral: true });
-    }
+  } catch (e) {
+    console.error("🚫 起動時エラー:", e);
   }
-
-  if (interaction.isButton()) {
-    const [action, sub, teamName, userId] = interaction.customId.split("_");
-    if (action !== "confirm" || sub !== "delete" || interaction.user.id !== userId) return;
-
-    const guild = interaction.guild;
-    const role = guild.roles.cache.find(r => r.name === `Team_${teamName}`);
-    const category = guild.channels.cache.find(c => c.name === `Team_${teamName}` && c.type === ChannelType.GuildCategory);
-
-    try {
-      if (category) {
-        const children = guild.channels.cache.filter(ch => ch.parentId === category.id);
-        for (const [, ch] of children) await ch.delete();
-        await category.delete();
-      }
-      if (role) await role.delete();
-
-      await interaction.update({
-        content: `✅ チーム「${teamName}」を削除しました。`,
-        components: [],
-      });
-
-    } catch (error) {
-      console.error(error);
-      await interaction.update({
-        content: "❌ チーム削除中にエラーが発生しました。",
-        components: [],
-      });
-    }
-  }
-});
+})();
 
 client.login(process.env.TOKEN);
