@@ -1,52 +1,53 @@
 require("dotenv").config();
 
+process.on("unhandledRejection", (reason, promise) => {
+    console.error("Unhandled Rejection:", reason);
+});
+process.on("uncaughtException", (error) => {
+    console.error("Uncaught Exception:", error);
+});
+
 const deployCommands = require("./deploy-commands");
+const {
+    Client,
+    GatewayIntentBits,
+    PermissionsBitField,
+    ChannelType,
+    ActionRowBuilder,
+    ButtonBuilder,
+    ButtonStyle,
+} = require("discord.js");
+const express = require("express");
+
 
 (async () => {
-  try {
-    await deployCommands(); // ここで待ってから次へ
+    try {
+        await deployCommands(); // ここで待ってから次へ
 
-    const {
-        Client,
-        GatewayIntentBits,
-        PermissionsBitField,
-        ChannelType,
-        ActionRowBuilder,
-        ButtonBuilder,
-        ButtonStyle,
-    } = require("discord.js");
 
-    const client = new Client({
-      intents: [GatewayIntentBits.Guilds, GatewayIntentBits.GuildMembers],
-    });
+        const client = new Client({
+            intents: [GatewayIntentBits.Guilds, GatewayIntentBits.GuildMembers],
+        });
 
-    // ↓ Bot ログイン
-    client.once("ready", () => {
-      console.log(`✅ ログイン成功：${client.user.tag}`);
-    });
+        // ↓ Bot ログイン
+        client.once("ready", () => {
+            console.log(`✅ ログイン成功：${client.user.tag}`);
+        });
 
-    client.login(process.env.TOKEN);
+        client.login(process.env.TOKEN);
 
-    // ↓ Web サーバー起動（Render用）
-    const express = require("express");
-    const app = express();
-    app.get("/", (req, res) => {
-      res.send("Bot is alive!");
-    });
-    app.listen(3000, () => {
-      console.log("🌐 Webサーバーがポート3000で起動しました");
-    });
+        // ↓ Web サーバー起動（Render用）
+        const app = express();
+        app.get("/", (req, res) => {
+            res.send("Bot is alive!");
+        });
+        app.listen(3000, () => {
+            console.log("🌐 Webサーバーがポート3000で起動しました");
+        });
 
-    process.on("unhandledRejection", (reason, promise) => {
-        console.error("Unhandled Rejection:", reason);
-    });
-    process.on("uncaughtException", (error) => {
-        console.error("Uncaught Exception:", error);
-    });
-
-    client.on("interactionCreate", async (interaction) => {
-        if (!interaction.guild) return;
-        const guild = interaction.guild;
+        client.on("interactionCreate", async (interaction) => {
+            if (!interaction.guild) return;
+            const guild = interaction.guild;
 
         try {
             if (interaction.isChatInputCommand()) {
@@ -329,9 +330,7 @@ const deployCommands = require("./deploy-commands");
         }
     });
 
-  } catch (e) {
-    console.error("🚫 起動時エラー:", e);
-  }
+    } catch (e) {
+        console.error("🚫 起動時エラー:", e);
+    }
 })();
-
-client.login(process.env.TOKEN);
