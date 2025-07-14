@@ -12,15 +12,15 @@ const commands = [
     options: [
       {
         name: "name",
-        description: "作成するチーム名",
-        type: 3, // STRING
+        description: "チーム名",
+        type: 3,
         required: true,
       },
     ],
   },
   {
     name: "team_delete",
-    description: "このチャンネルのチームを削除します（chat内のみ）",
+    description: "このチャンネルのチームを削除します",
   },
   {
     name: "team_addmember",
@@ -36,12 +36,12 @@ const commands = [
   },
   {
     name: "team_removemember",
-    description: "チームからメンバーを削除します",
+    description: "チームからメンバーを外します",
     options: [
       {
         name: "user",
-        description: "削除するユーザー",
-        type: 6, // USER
+        description: "外すユーザー",
+        type: 6,
         required: true,
       },
     ],
@@ -53,7 +53,7 @@ const commands = [
       {
         name: "new_name",
         description: "新しいチーム名",
-        type: 3, // STRING
+        type: 3,
         required: true,
       },
     ],
@@ -70,6 +70,7 @@ async function deployCommands() {
     console.log("✅ コマンド登録完了！");
   } catch (error) {
     console.error("❌ コマンド登録失敗:", error);
+    throw error;
   }
 }
 
