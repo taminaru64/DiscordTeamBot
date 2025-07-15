@@ -50,20 +50,22 @@ client.on("interactionCreate", async (interaction) => {
 
     try {
         if (interaction.isChatInputCommand()) {
+            const hasPermissionRole = interaction.member.roles.cache.some(
+                (r) => r.name === "チーム機能を使用"
+            );
+
+            if (!hasPermissionRole) {
+                return await interaction.reply({
+                    content: "❌ この機能は、「チャンネル&ロール」の「サーバーの『チーム機能』を使いますか？」で「使う」と答えることで使用できます。",
+                    ephemeral: true,
+                });
+            }
+            
             const commandName = interaction.commandName;
             await interaction.deferReply({ ephemeral: true });
 
             // /team_create
             if (commandName === "team_create") {
-                const allowedRoleName = "チーム機能を使用";
-                const allowedRole = interaction.member.roles.cache.find(
-                    (role) => role.name === allowedRoleName
-                );
-
-                if (!allowedRole) {
-                    return await interaction.editReply(`❌ このコマンドを使用するには「${allowedRoleName}」ロールが必要です。`);
-                }
-
                 const teamName = interaction.options.getString("name");
                 const roleName = `Team_${teamName}`;
                 const categoryName = `Team_${teamName}`;
@@ -155,7 +157,7 @@ client.on("interactionCreate", async (interaction) => {
                 const match = channel.parent.name.match(/^Team_(.+)$/);
                 if (!match) {
                     return interaction.editReply(
-                        "❌ チームのカテゴリー内でのみ使用してください。",
+                        "❌ このコマンドはチームのカテゴリー内でのみ使用してください。",
                     );
                 }
 
