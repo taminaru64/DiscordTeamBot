@@ -55,6 +55,15 @@ client.on("interactionCreate", async (interaction) => {
 
             // /team_create
             if (commandName === "team_create") {
+                const allowedRoleName = "チーム機能を使用";
+                const allowedRole = interaction.member.roles.cache.find(
+                    (role) => role.name === allowedRoleName
+                );
+
+                if (!allowedRole) {
+                    return await interaction.editReply(`❌ このコマンドを使用するには「${allowedRoleName}」ロールが必要です。`);
+                }
+
                 const teamName = interaction.options.getString("name");
                 const roleName = `Team_${teamName}`;
                 const categoryName = `Team_${teamName}`;
@@ -200,6 +209,18 @@ client.on("interactionCreate", async (interaction) => {
                     (r) => r.name === `Team_${teamName}`,
                 );
                 const member = await guild.members.fetch(target.id);
+
+                // ここで「チーム機能を使用」ロールがあるか確認
+                const requiredRoleName = "チーム機能を使用";
+                const hasRequiredRole = member.roles.cache.some(
+                    (r) => r.name === requiredRoleName
+                );
+
+                if (!hasRequiredRole) {
+                    return interaction.editReply(
+                        `❌ ${target.username} は「${requiredRoleName}」ロールを持っていません。追加できません。`,
+                    );
+                }
 
                 if (!role) {
                     return interaction.editReply(
