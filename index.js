@@ -257,6 +257,48 @@ client.on("interactionCreate", async (interaction) => {
                     );
                 }
             }
+            
+            //team_rename
+            // /team_rename
+            else if (commandName === "team_rename") {
+                const newName = interaction.options.getString("new_name");
+                const channel = interaction.channel;
+            
+                if (!channel.parent) {
+                    return interaction.editReply("❌ このコマンドはチームのカテゴリー内で使用してください。");
+                }
+            
+                const match = channel.parent.name.match(/^Team_(.+)$/);
+            
+                if (!match) {
+                    return interaction.editReply("❌ チームのカテゴリー内で使用してください。");
+                }
+            
+                const oldTeamName = match[1];
+                const newRoleName = `Team_${newName}`;
+                const newCategoryName = `Team_${newName}`;
+            
+                const role = interaction.guild.roles.cache.find(r => r.name === `Team_${oldTeamName}`);
+                const category = channel.parent;
+            
+                if (!role || !category) {
+                    return interaction.editReply("❌ チームのロールまたはカテゴリが見つかりません。");
+                }
+
+                // 名前の重複チェック
+                const duplicateRole = interaction.guild.roles.cache.find(r => r.name === newRoleName);
+                const duplicateCategory = interaction.guild.channels.cache.find(
+                    c => c.name === newCategoryName && c.type === ChannelType.GuildCategory
+                );
+                if (duplicateRole || duplicateCategory) {
+                    return interaction.editReply(`❌ チーム名「${newName}」は既に使用されています。`);
+                }
+            
+                await role.setName(newRoleName);
+                await category.setName(newCategoryName);
+
+                await interaction.editReply(`✅ チーム名を「${oldTeamName}」から「${newName}」に変更しました！`);
+            }
         }
 
         // ボタン操作: 削除確認
