@@ -145,22 +145,16 @@ client.on("interactionCreate", async (interaction) => {
                 await interaction.editReply(`✅ チーム「${teamName}」を作成しました！`);
             }
 
+            //ここから先のコマンドは、チームカテゴリー内でのみ使用可能
+            const channelParent = interaction.channel.parent;
+            if (!channelParent || channelParent.name.match(/^Team_(.+)$/)) {
+                return interaction.editReply(
+                    "❌ このコマンドはチームのカテゴリー内でのみ使用してください。",
+                );
+            }
+
             // /team_delete
             else if (commandName === "team_delete") {
-                const channel = interaction.channel;
-                if (!channel.parent) {
-                    return interaction.editReply(
-                        "❌ このコマンドはチームのカテゴリー内でのみ使用してください。",
-                    );
-                }
-
-                const match = channel.parent.name.match(/^Team_(.+)$/);
-                if (!match) {
-                    return interaction.editReply(
-                        "❌ このコマンドはチームのカテゴリー内でのみ使用してください。",
-                    );
-                }
-
                 const teamName = match[1];
                 const role = interaction.member.roles.cache.find(
                     (r) => r.name === `Team_${teamName}`,
@@ -191,20 +185,6 @@ client.on("interactionCreate", async (interaction) => {
             // /team_addmember
             else if (commandName === "team_addmember") {
                 const target = interaction.options.getUser("member");
-                const channel = interaction.channel;
-
-                if (!channel.parent) {
-                    return interaction.editReply(
-                        "❌ このコマンドはチームのカテゴリー内で使用してください。",
-                    );
-                }
-
-                const match = channel.parent.name.match(/^Team_(.+)$/);
-                if (!match) {
-                    return interaction.editReply(
-                        "❌ チームのカテゴリー内で使用してください。",
-                    );
-                }
 
                 const teamName = match[1];
                 const role = guild.roles.cache.find(
@@ -220,13 +200,13 @@ client.on("interactionCreate", async (interaction) => {
 
                 if (!hasRequiredRole) {
                     return interaction.editReply(
-                        `❌ ${target.username} は「${requiredRoleName}」ロールを持っていません。追加できません。`,
+                        `❌ ${target.username} さんはチーム機能を許可していないため、追加できません。`,
                     );
                 }
 
                 if (!role) {
                     return interaction.editReply(
-                        `❌ チーム「${teamName}」のロールが見つかりません。`,
+                        `❌ あなたは、チーム「${teamName}」のメンバーではありません。`,
                     );
                 }
 
@@ -239,20 +219,6 @@ client.on("interactionCreate", async (interaction) => {
             // /team_removemember
             else if (commandName === "team_removemember") {
                 const target = interaction.options.getUser("member");
-                const channel = interaction.channel;
-
-                if (!channel.parent) {
-                    return interaction.editReply(
-                        "❌ このコマンドはチームのカテゴリー内で使用してください。",
-                    );
-                }
-
-                const match = channel.parent.name.match(/^Team_(.+)$/);
-                if (!match) {
-                    return interaction.editReply(
-                        "❌ チームのカテゴリー内で使用してください。",
-                    );
-                }
 
                 const teamName = match[1];
                 const role = guild.roles.cache.find(
@@ -262,7 +228,7 @@ client.on("interactionCreate", async (interaction) => {
 
                 if (!role || !member.roles.cache.has(role.id)) {
                     return interaction.editReply(
-                        `❌ ユーザーはチーム「${teamName}」のメンバーではありません。`,
+                        `❌ ${target.username} さんははチーム「${teamName}」のメンバーではありません。`,
                     );
                 }
 
@@ -297,17 +263,6 @@ client.on("interactionCreate", async (interaction) => {
             //team_rename
             else if (commandName === "team_rename") {
                 const newName = interaction.options.getString("new_name");
-                const channel = interaction.channel;
-
-                if (!channel.parent) {
-                    return interaction.editReply("❌ このコマンドはチームのカテゴリー内で使用してください。");
-                }
-
-                const match = channel.parent.name.match(/^Team_(.+)$/);
-
-                if (!match) {
-                    return interaction.editReply("❌ チームのカテゴリー内で使用してください。");
-                }
 
                 const oldTeamName = match[1];
                 const newRoleName = `Team_${newName}`;
@@ -317,7 +272,7 @@ client.on("interactionCreate", async (interaction) => {
                 const category = channel.parent;
 
                 if (!role || !category) {
-                    return interaction.editReply("❌ チームのロールまたはカテゴリが見つかりません。");
+                    return interaction.editReply(`❌ チーム「${newName}」が見つかりません。`);
                 }
 
                 // 名前の重複チェック
