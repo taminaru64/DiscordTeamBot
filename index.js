@@ -2,8 +2,15 @@ require("dotenv").config();
 
 const express = require("express");
 const app = express();
-app.get("/", (req, res) => res.send("Bot is alive!"));
-app.listen(3000, () => console.log("🌐 Webサーバーがポート3000で起動しました"));
+
+app.get("/", (req, res) => {
+    res.send("Bot is alive!");
+});
+
+const PORT = process.env.PORT || 3000;
+app.listen(PORT, () => {
+    console.log(`🌐 Webサーバーがポート${PORT}で起動しました`);
+});
 
 process.on("unhandledRejection", (reason, promise) => {
     console.error("Unhandled Rejection:", reason);
@@ -257,30 +264,28 @@ client.on("interactionCreate", async (interaction) => {
                     );
                 }
             }
-            
             //team_rename
-            // /team_rename
             else if (commandName === "team_rename") {
                 const newName = interaction.options.getString("new_name");
                 const channel = interaction.channel;
-            
+
                 if (!channel.parent) {
                     return interaction.editReply("❌ このコマンドはチームのカテゴリー内で使用してください。");
                 }
-            
+
                 const match = channel.parent.name.match(/^Team_(.+)$/);
-            
+
                 if (!match) {
                     return interaction.editReply("❌ チームのカテゴリー内で使用してください。");
                 }
-            
+
                 const oldTeamName = match[1];
                 const newRoleName = `Team_${newName}`;
                 const newCategoryName = `Team_${newName}`;
-            
+
                 const role = interaction.guild.roles.cache.find(r => r.name === `Team_${oldTeamName}`);
                 const category = channel.parent;
-            
+
                 if (!role || !category) {
                     return interaction.editReply("❌ チームのロールまたはカテゴリが見つかりません。");
                 }
@@ -293,7 +298,7 @@ client.on("interactionCreate", async (interaction) => {
                 if (duplicateRole || duplicateCategory) {
                     return interaction.editReply(`❌ チーム名「${newName}」は既に使用されています。`);
                 }
-            
+
                 await role.setName(newRoleName);
                 await category.setName(newCategoryName);
 
