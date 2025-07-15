@@ -37,6 +37,13 @@ client.once("ready", () => {
     console.log(`✅ ログイン成功：${client.user.tag}`);
 });
 
+client.on("shardDisconnect", (event, id) => {
+    console.warn(`⚠️ Shard ${id} disconnected`, event);
+});
+client.on("reconnecting", () => {
+    console.log("🔄 再接続中...");
+});
+
 client.on("interactionCreate", async (interaction) => {
     if (!interaction.guild) return;
     const guild = interaction.guild;
