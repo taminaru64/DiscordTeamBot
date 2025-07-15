@@ -143,6 +143,8 @@ client.on("interactionCreate", async (interaction) => {
 
                 await interaction.member.roles.add(role);
                 await interaction.editReply(`✅ チーム「${teamName}」を作成しました！`);
+
+                return;
             }
 
             //ここから先のコマンドは、チームカテゴリー内でのみ使用可能
@@ -154,7 +156,7 @@ client.on("interactionCreate", async (interaction) => {
             }
 
             // /team_delete
-            else if (commandName === "team_delete") {
+            if (commandName === "team_delete") {
                 const teamName = match[1];
                 const role = interaction.member.roles.cache.find(
                     (r) => r.name === `Team_${teamName}`,
