@@ -149,11 +149,13 @@ client.on("interactionCreate", async (interaction) => {
 
             //ここから先のコマンドは、チームカテゴリー内でのみ使用可能
             const channelParent = interaction.channel?.parent;
-            if (!channelParent || !/^Team_(.+)$/.test(channelParent.name)) {
+            const match = channelParent?.name.match(/^Team_(.+)$/);
+            if (!match) {
                 return await interaction.editReply(
-                    "❌ このコマンドはチームのカテゴリー内でのみ使用してください。",
+                    "❌ このコマンドはチームのカテゴリー内でのみ使用してください。"
                 );
             }
+            const teamName = match[1];
 
             // /team_delete
             if (commandName === "team_delete") {
