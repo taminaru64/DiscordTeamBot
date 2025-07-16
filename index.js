@@ -148,9 +148,9 @@ client.on("interactionCreate", async (interaction) => {
             }
 
             //ここから先のコマンドは、チームカテゴリー内でのみ使用可能
-            const channelParent = interaction.channel.parent;
-            if (!channelParent || !channelParent.name.match(/^Team_(.+)$/)) {
-                return interaction.editReply(
+            const channelParent = interaction.channel?.parent;
+            if (!channelParent || !/^Team_(.+)$/.test(channelParent.name)) {
+                return await interaction.editReply(
                     "❌ このコマンドはチームのカテゴリー内でのみ使用してください。",
                 );
             }
