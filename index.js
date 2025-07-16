@@ -155,7 +155,6 @@ client.on("interactionCreate", async (interaction) => {
                     "❌ このコマンドはチームのカテゴリー内でのみ使用してください。"
                 );
             }
-            const teamName = match[1];
 
             // /team_delete
             if (commandName === "team_delete") {
